@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JSON TEST</title>
+</head>
+<body>
+<div class="my-5 row">
+    <div th:each="card : ${cards}"  class="card m-1 col-4" style="width: 11rem;">
+        <img th:src="@{/upload/{url}(url = ${card.imageUrl})}" class="card-img-top" alt="...">
+        <div class="card-body">
+            <h5 th:text="${card.name}" class="card-title">Card title</h5>
+            <div class="d-flex justify-content-end">
+                <a th:href="@{/edit/{id}(id = ${card.id})}" class="btn link-success"><img src="image/pencil-square.svg" alt=""></a>
+                <button class="btn link-danger" data-bs-toggle="modal" data-bs-target="#pageModal" data-item-id="@{/{id}(id = ${card.id})}"><img src="image/trash.svg" alt=""></button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
