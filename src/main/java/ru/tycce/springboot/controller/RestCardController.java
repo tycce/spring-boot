@@ -1,22 +1,18 @@
 package ru.tycce.springboot.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.tycce.springboot.database.DatabaseService;
-import ru.tycce.springboot.database.entity.Card;
 
 @RestController
+@RequestMapping("/rest")
 @RequiredArgsConstructor
+@Slf4j
 public class RestCardController {
 
-//    private final DatabaseService databaseService;
-//
-//    @GetMapping()
-//    public ResponseEntity<Card> getAllCard(){
-//        return new ResponseEntity<Card>(databaseService.getAllCards(), HttpStatus.OK);
-//    }
+    private final DatabaseService databaseService;
+
+
 }

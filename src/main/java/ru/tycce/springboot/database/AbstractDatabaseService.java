@@ -28,6 +28,10 @@ public class AbstractDatabaseService {
         }
     }
 
+    protected <T> List<T> saveAll(List<T> list, CrudRepository<T, ?> repository) {
+        return getEntitiesToList(repository.saveAll(list));
+    }
+
     protected <T> List<T> getEntitiesToList(Iterable<T> entities){
         List<T> list = new ArrayList<>();
         entities.forEach(list::add);

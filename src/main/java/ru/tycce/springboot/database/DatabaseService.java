@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.tycce.springboot.database.entity.Card;
-import ru.tycce.springboot.database.entity.TestRun;
+import ru.tycce.springboot.database.entity.Task;
 import ru.tycce.springboot.database.repository.CardRepository;
-import ru.tycce.springboot.database.repository.TestRunRepository;
+import ru.tycce.springboot.database.repository.TaskRepository;
 
 import java.util.List;
 
@@ -15,7 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DatabaseService extends AbstractDatabaseService{
     private final CardRepository cardRepository;
-    private final TestRunRepository testRunRepository;
+    private final TaskRepository taskRepository;
 
     public Card getCardById(int id) {
         return getEntityById(id, cardRepository);
@@ -30,18 +30,19 @@ public class DatabaseService extends AbstractDatabaseService{
         return getEntitiesToList(cardRepository.findAll());
     }
 
-    public TestRun getTestRunById(int id) {
-        return getEntityById(id, testRunRepository);
+    public Task getTaskById(int id) {
+        return getEntityById(id, taskRepository);
     }
-    public TestRun addOrUpdateTestRun(TestRun testRun) {
-        return saveOrUpdate(testRun, testRunRepository);
+    public Task addOrUpdateTask(Task task) {
+        return saveOrUpdate(task, taskRepository);
     }
-    public boolean deleteTestRunById(int id){
-        return deleteById(id, testRunRepository);
+    public boolean deleteTaskById(int id){
+        return deleteById(id, taskRepository);
     }
-    public List<TestRun> getAllTestRuns(){
-        return getEntitiesToList(testRunRepository.findAll());
+    public List<Task> getAllTasks(){
+        return getEntitiesToList(taskRepository.findAll());
     }
+    public List<Task> addOrUpdateAllTask(List<Task> tasks){return saveAll(tasks, taskRepository);}
 
 
 }

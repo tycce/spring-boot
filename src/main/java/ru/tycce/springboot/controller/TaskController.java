@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import ru.tycce.springboot.database.DatabaseService;
-import ru.tycce.springboot.database.entity.TestRun;
+import ru.tycce.springboot.database.entity.Task;
 import ru.tycce.springboot.service.SchedulerService;
 
 import java.time.LocalDateTime;
@@ -19,37 +19,37 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 @Slf4j
 @RequestMapping("")
-public class TestRunController {
+public class TaskController {
 
     private final DatabaseService databaseService;
     private final SchedulerService scheduler;
 
     @GetMapping("/")
     public String index(Model model) {
-        model.addAttribute("testRun", new TestRun());
-        model.addAttribute("testRuns", databaseService.getAllTestRuns());
+        model.addAttribute("task", new Task());
+        model.addAttribute("tasks", databaseService.getAllTasks());
 
-//        model.addAttribute("testRunScheduledFutureMap", scheduler.getTestRunScheduledFutureMap().values().toString());
-        model.addAttribute("nextScheduledTestRun", scheduler.getNextScheduledTestRun());
-        return "testRun";
+//        model.addAttribute("taskScheduledFutureMap", scheduler.getTaskScheduledFutureMap().values().toString());
+        model.addAttribute("nextScheduledTask", scheduler.getNextScheduledTask());
+        return "task";
     }
 
     @PostMapping("/")
-    public String addTestRun(
+    public String addTask(
             @RequestParam("dateStart") String dateStart,
             @RequestParam("deprecate") boolean deprecate,
             @RequestParam("run") boolean run
     ) {
-        TestRun testRun = new TestRun();
+        Task task = new Task();
 
         LocalDateTime localDateTime = LocalDateTime.parse(dateStart, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        testRun.setStartTestTime(localDateTime);
-        testRun.setEndTestTime(localDateTime.plusMinutes(1));
-        testRun.setDeprecate(deprecate);
-        testRun.setRun(run);
+        task.setStartTime(localDateTime);
+        task.setEndTime(localDateTime.plusMinutes(1));
+        task.setDeprecate(deprecate);
+        task.setRun(run);
 
 
-        if(scheduler.addScheduleTest(testRun) == null) {
+        if(scheduler.addScheduleTest(task) == null) {
             log.error("Не удалось добавить задачу");
         }
 

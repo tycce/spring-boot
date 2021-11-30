@@ -4,13 +4,13 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.tycce.springboot.database.DatabaseService;
-import ru.tycce.springboot.database.entity.TestRun;
+import ru.tycce.springboot.database.entity.Task;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -18,76 +18,80 @@ import java.util.concurrent.*;
 @Data
 public class SchedulerService{
 
-    private final Map<TestRun, ScheduledFuture<?>> testRunScheduledFutureMap;
+    private final Map<Task, ScheduledFuture<?>> taskScheduledFutureMap;
     private final DatabaseService databaseService;
     private final ScheduledExecutorService scheduledExecutorService;
 
     public SchedulerService(DatabaseService databaseService){
         this.databaseService = databaseService;
         this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-        this.testRunScheduledFutureMap = new ConcurrentHashMap<>();
+        this.taskScheduledFutureMap = new ConcurrentHashMap<>();
 
+        clearDeprecatedTask();
         scheduleTests();
-        clearDeprecatedTestRun();
     }
 
     private void scheduleTests() {
-        databaseService.getAllTestRuns().stream().filter(e->!e.isDeprecate()).forEach(this::scheduleTest);
+        databaseService.getAllTasks().stream().filter(e->!e.isDeprecate()).forEach(this::scheduleTest);
     }
 
-    public TestRun getNextScheduledTestRun(){
-        return testRunScheduledFutureMap.keySet().stream().min(TestRun::compareTo).orElse(null);
+    public Task getNextScheduledTask(){
+        return taskScheduledFutureMap.keySet().stream().min(Task::compareTo).orElse(null);
     }
 
-    private void clearDeprecatedTestRun() {
+    private void clearDeprecatedTask() {
         LocalDateTime now = LocalDateTime.now();
-        testRunScheduledFutureMap.keySet().stream().filter(tr -> tr.getStartTestTime().isBefore(now)).forEach(this::deleteScheduleTest);
+        databaseService.addOrUpdateAllTask(databaseService.getAllTasks()
+                .stream()
+                .filter(e->e.getStartTime().isBefore(now))
+                .peek(e->e.setDeprecate(true))
+                .peek(e->e.setRun(false))
+                .collect(Collectors.toList()));
     }
 
-    public TestRun addScheduleTest(TestRun testRun){
-        if(checkScheduledDateTime(testRun)) {
-            testRun = databaseService.addOrUpdateTestRun(testRun);
-            scheduleTest(testRun);
-            log.info("TestRun запланирован: {}, future: {}", testRun, testRunScheduledFutureMap.get(testRun));
-            return testRun;
+    public Task addScheduleTest(Task task){
+        if(checkScheduledDateTime(task)) {
+            task = databaseService.addOrUpdateTask(task);
+            scheduleTest(task);
+            log.info("Task запланирован: {}, future: {}", task, taskScheduledFutureMap.get(task));
+            return task;
         }
         else{
             return null;
         }
     }
 
-    private boolean checkScheduledDateTime(TestRun testRun) {
-        if(testRun.getStartTestTime().isBefore(LocalDateTime.now())) return false;
+    private boolean checkScheduledDateTime(Task task) {
+        if(task.getStartTime().isBefore(LocalDateTime.now())) return false;
 
-        for (TestRun scheduledTestRun: testRunScheduledFutureMap.keySet()) {
-            if(!((testRun.getStartTestTime().isBefore(scheduledTestRun.getStartTestTime()) && testRun.getEndTestTime().isBefore(scheduledTestRun.getStartTestTime()))
-                    || (testRun.getStartTestTime().isAfter(scheduledTestRun.getEndTestTime()) && testRun.getEndTestTime().isAfter(scheduledTestRun.getEndTestTime())))){
+        for (Task scheduledTask: taskScheduledFutureMap.keySet()) {
+            if(!((task.getStartTime().isBefore(scheduledTask.getStartTime()) && task.getEndTime().isBefore(scheduledTask.getStartTime()))
+                    || (task.getStartTime().isAfter(scheduledTask.getEndTime()) && task.getEndTime().isAfter(scheduledTask.getEndTime())))){
                 return false;
             }
         }
         return true;
     }
 
-    private void scheduleTest(TestRun testRun){
-        testRunScheduledFutureMap.put(testRun, scheduledExecutorService.schedule(() -> startTest(testRun), getMilliBeforeDateStart(testRun.getStartTestTime()), TimeUnit.MILLISECONDS));
+    private void scheduleTest(Task task){
+        taskScheduledFutureMap.put(task, scheduledExecutorService.schedule(() -> startTest(task), getMilliBeforeDateStart(task.getStartTime()), TimeUnit.MILLISECONDS));
     }
 
-    private void startTest(TestRun testRun){
-        log.info("TestRun запущен: {}, future: {}", testRun, testRunScheduledFutureMap.get(testRun));
-        testRun.setRun(true);
-        databaseService.addOrUpdateTestRun(testRun);
+    private void startTest(Task task){
+        log.info("Task запущен: {}, future: {}", task, taskScheduledFutureMap.get(task));
+        task.setRun(true);
+        databaseService.addOrUpdateTask(task);
 
         try {
-            Thread.sleep(getMilliBeforeDateStart(testRun.getEndTestTime()));
-            log.info("TestRun завершен: {}, future: {}", testRun, testRunScheduledFutureMap.get(testRun));
+            Thread.sleep(getMilliBeforeDateStart(task.getEndTime()));
+            log.info("Task завершен: {}, future: {}", task, taskScheduledFutureMap.get(task));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
 
-        testRun.setRun(false);
-        databaseService.addOrUpdateTestRun(testRun);
-        deleteScheduleTest(testRun);
+        databaseService.addOrUpdateTask(task);
+        deleteScheduleTest(task);
     }
 
     private long getMilliBeforeDateStart(LocalDateTime localDateTime) {
@@ -95,14 +99,15 @@ public class SchedulerService{
                 - LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
-    public void deleteScheduleTest(TestRun testRun) {
-        testRunScheduledFutureMap.get(testRun).cancel(true);
-        testRunScheduledFutureMap.remove(testRun);
+    public void deleteScheduleTest(Task task) {
+        ScheduledFuture<?> future = taskScheduledFutureMap.get(task);
+        if(future != null) taskScheduledFutureMap.get(task).cancel(true);
+        taskScheduledFutureMap.remove(task);
 
-        testRun.setRun(true);
-        testRun.setDeprecate(true);
-        databaseService.addOrUpdateTestRun(testRun);
-        log.info("TestRun was marked as deprecated: {}, future: {}", testRun, testRunScheduledFutureMap.get(testRun));
+        task.setRun(false);
+        task.setDeprecate(true);
+        databaseService.addOrUpdateTask(task);
+        log.info("Task was marked as deprecated: {}, future: {}", task, taskScheduledFutureMap.get(task));
     }
 
 }

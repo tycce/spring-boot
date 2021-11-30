@@ -11,26 +11,26 @@ import java.time.format.DateTimeFormatter;
 
 @Data
 @Entity
-public class TestRun implements Comparable<TestRun>{
+public class Task implements Comparable<Task>{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    private LocalDateTime startTestTime;
-    private LocalDateTime endTestTime;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
     private boolean deprecate;
     private boolean isRun;
 
     @Override
-    public int compareTo(TestRun o) {
-        return startTestTime.compareTo(o.startTestTime);
+    public int compareTo(Task o) {
+        return startTime.compareTo(o.startTime);
     }
 
     public String convertDate(LocalDateTime localDateTime) {
         return localDateTime.format(DateTimeFormatter.ofPattern("HH.mm"));
     }
 
-    public TestRun getThis(){
+    public Task getThis(){
         return this;
     }
 }
